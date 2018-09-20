@@ -1,4 +1,4 @@
-#Copyright (c) 2018 Tommy Carpenter
+#Copyright (c) 2013 Tommy Carpenter
 
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -18,31 +18,28 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #THE SOFTWARE.
 
-# Last tested on Arch Linux using cuda9.2 in Sept 2018
 
-CUDAPATH=/opt/cuda/lib64
+#NOTE THIS IS FOR MAC ONLY.... You will need to write your own makefile if using another OS
 
-GPPOPTIONS += -O -fexceptions
+GPPOPTIONS += -m32 -O -fPIC -fexceptions -DNDEBUG -DIL_STD 
 
-NVCCOPTIONS += -Xlinker -rpath,$(CUDAPATH)
+NVCCOPTIONS += -Xlinker -rpath,/usr/local/cuda/lib #-arch sm_13
 
-LIBRARIES += -L$(CUDAPATH) -lcudart #lcuda
-
+LIBRARIES += -L/usr/local/cuda/lib -lcuda -lcudart -L/Applications/CPLEX/cplex/lib/x86_darwin9_gcc4.0/static_pic  -lilocplex -lcplex  -L/Applications/CPLEX/concert/lib/x86_darwin9_gcc4.0/static_pic  -lconcert  -m32 -lm -lpthread -framework CoreFoundation -framework IOKit
+	
 # Debug/release configuration
 ifeq ($(dbg),1)
 	GPPOPTIONS  += -g -D_DEBUG
 	NVCCOPTIONS += -D_DEBUG -G -g
 else 
-	GPPOPTIONS  += -O2 -fno-strict-aliasing -DNDEBUG
+	GPPOPTIONS  += -O2 -fno-strict-aliasing
 	NVCCOPTIONS += --compiler-options -fno-strict-aliasing 
 endif
 
-#Used to need this...
-#DYLD_LIBRARY_PATH=$(CUDAPATH)
 all:
+	DYLD_LIBRARY_PATH=/usr/local/cuda/lib
 	g++ -c *.cpp $(GPPOPTIONS) $(GPPINCLUDES)
-	nvcc -c *.cu $(NVCCOPTIONS)
-	g++ -o runme *.o $(LIBRARIES)
+	/usr/local/cuda/bin/nvcc -c *.cu $(NVCCOPTIONS)
+	g++ -o runme *.o $(LIBRARIES)			
 clean:
 	rm *.o
-	rm runme
