@@ -3,6 +3,8 @@ runme
 mult_input1.txt
 mult_input2.txt
 GPUOutput.txt
+9GPUOutput.txt
+cpuGPUOutput.txt
 
 # Prerequisites
 *.d

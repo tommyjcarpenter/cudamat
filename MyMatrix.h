@@ -1,4 +1,4 @@
-/*Copyright (c) 2013 Tommy Carpenter
+/*Copyright (c) 2013-2018 Tommy Carpenter
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,36 +29,30 @@ using namespace std;
 
 class MyMatrix
 {
-	
-public:
-	MyMatrix(int new_rows, int new_cols, int padr, int padt);
-	~MyMatrix(void);
 
-	float *data; 
-   int padr;
-	int padc;
-   int rows;
-   int cols;
+    public:
+        MyMatrix(int new_rows, int new_cols, int padr, int padt);
+        ~MyMatrix(void);
 
-	// reading/writing functions
-	void printData();
-	void writeMatrix(string filename);
-	void writeDifference(MyMatrix &Mat1, MyMatrix &Mat2, string filename);
+        float *data;
+        int padr;
+        int padc;
+        int rows;
+        int cols;
 
-   // cuda matrix operations
-	MyMatrix CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2);
-	MyMatrix CUDAMatPower( MyMatrix &Mat1, int times);
+        // reading/writing functions
+        void printData();
+        void writeMatrix(string filename);
+        void writeDifference(MyMatrix &Mat1, MyMatrix &Mat2, string filename);
 
-   // gen new matrices
-	static MyMatrix *readMatrix(string filename);
-	static MyMatrix *generateRandomMatrix(int r, int c);
-   static void multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m);
-	static void raisePowerOf2(string filename1, string gpuoutfname, int genNewm, int Times, int n);
+        // cuda matrix operations
+        MyMatrix CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2);
+        MyMatrix CUDAMatMatMultiply_cuda9(MyMatrix *Mat1, MyMatrix *Mat2);
+        MyMatrix CUDAMatPower( MyMatrix &Mat1, int times);
+
+        // gen new matrices
+        static MyMatrix *readMatrix(string filename);
+        static MyMatrix *generateRandomMatrix(int r, int c);
+        static void multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m);
+        static void raisePowerOf2(string filename1, string gpuoutfname, int genNewm, int Times, int n);
 };
-
-
-
-
-
-
-

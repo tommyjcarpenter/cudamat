@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <iomanip>
 #include <time.h>
 #include <exception>
+#include "cuda_runtime.h"
 
 #define BLOCKSIZE 512
 
@@ -34,45 +35,38 @@ using namespace std;
 // constructor for MyMatrix, a matrix with padding for GPU purposes
 MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
 {
-	rows = new_rows;
-	cols = new_cols;
-	padr = padrr;
-	padc = padcc;
-	try
-	{
-		data = new float[new_rows*new_cols];
-	}
-	catch (bad_alloc&)
-    {
-		cout << "Exception in memory allocation. Could not allocate enough memory for the array." << endl << flush;
-		cout << "Exception in array memory allocation. Could not allocate enough memory for the array." << endl << flush;
-		exit(1);
-	}
-	 catch (exception& e)
-     {
-       cout << "Some other exception was caught (not bad_alloc) " << e.what() << endl << flush;
-		 exit(1);
-     }
+    rows = new_rows;
+    cols = new_cols;
+    padr = padrr;
+    padc = padcc;
+
+    cout << "allocating memory" << endl;
+    cudaError_t cudaStatus = cudaMallocManaged(&data, new_rows*new_cols*sizeof(float));
+    if (cudaStatus != cudaSuccess){
+        cout << cudaStatus << endl << flush;
+        exit(1);
+    }
+    cudaDeviceSynchronize();
+    cout << "allocating memory successful:" << cudaStatus << endl;
 }
 
 // destructor
 MyMatrix::~MyMatrix(void)
 {
-	delete data; // delete the data array
+    cudaFree(data); // delete the data array
 }
-
 
 // print a matrix, used for debugging
 void MyMatrix::printData()
 {
-	for (int i = 0; i < rows; i++)
-	{
-		for (int j = 0; j < cols; j++)
-		{
-			cout << " " << (data)[i*cols + j];
-		}
-		cout << endl;
-	}
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            cout << " " << (data)[i*cols + j];
+        }
+        cout << endl;
+    }
 }
 
 // reads a matrix from a textfile and returns a pointer to a new MyMatrix object that
@@ -85,78 +79,83 @@ MyMatrix *MyMatrix::readMatrix(string filename)
 {
    ifstream myReadFile;
    myReadFile.open(filename.c_str());
-	
-	int r, c;
+
+    int r, c;
    myReadFile >> r >> c;
 
-	// we need to pad the matrix so that the size is a multiple of blocksize. 
-	int padr = 0;
-	int padc = 0;
+    // we need to pad the matrix so that the size is a multiple of blocksize.
+    int padr = 0;
+    int padc = 0;
 
-	// TO DO LIST: MAKE BLOCKSIZE A PARAMATER ONCE FIGURED OUT HOW TO MAKE BLOCK SIZE DYNAMIC.
-	while((r + padr) % BLOCKSIZE != 0) padr++;
-	while((c + padc) % BLOCKSIZE != 0) padc++;
+    // TO DO LIST: MAKE BLOCKSIZE A PARAMATER ONCE FIGURED OUT HOW TO MAKE BLOCK SIZE DYNAMIC.
+    while((r + padr) % BLOCKSIZE != 0) padr++;
+    while((c + padc) % BLOCKSIZE != 0) padc++;
 
-	int totalr = padr + r;
-	int totalc = padc + c;
+    int totalr = padr + r;
+    int totalc = padc + c;
 
    // dynamically allocate a new mymatrix object
-	MyMatrix *newmat = new MyMatrix(totalr, totalc, padr, padc);
-	int index;
-	
-   //cout << "pritning r: " << r << "printing c: " << c << "totalc:" << totalc << " total r: " << totalr << endl;   
-	for (int i = 0; i < totalr; i++)
-	{   
-		for (int j = 0; j < totalc; j++)
-		{ 
-			index = i*totalc + j;
-			if ((j < c) && (i < r))
-			{  
-		      myReadFile >> (*newmat).data[index];
-			}
-			else
+    MyMatrix *newmat = new MyMatrix(totalr, totalc, padr, padc);
+    int index;
+
+   //cout << "pritning r: " << r << "printing c: " << c << "totalc:" << totalc << " total r: " << totalr << endl;
+    for (int i = 0; i < totalr; i++)
+    {
+        for (int j = 0; j < totalc; j++)
+        {
+            index = i*totalc + j;
+            if ((j < c) && (i < r))
+            {
+              myReadFile >> (*newmat).data[index];
+            }
+            else
          {
-	   		(*newmat).data[index] = 0;	
+            (*newmat).data[index] = 0;
          }
-		}
+        }
     }
-	myReadFile.close();
-	return newmat;
+    myReadFile.close();
+    return newmat;
 }
 
-// takes in rows and columns and generates a random matrix. Returns a pointer to that dynamically allocated matrix. 
+// takes in rows and columns and generates a random matrix. Returns a pointer to that dynamically allocated matrix.
 MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
 {
-   // we need to pad the matrix so that the size is a multiple of BLOCKSIZE. 
-	int padr = 0;
-	int padc = 0;
 
-	while((r + padr) % BLOCKSIZE != 0) padr++;
-	while((c + padc) % BLOCKSIZE != 0) padc++;
+    // we need to pad the matrix so that the size is a multiple of BLOCKSIZE.
+    int padr = 0;
+    int padc = 0;
 
-	int totalr = padr + r;
-	int totalc = padc + c;
-   int index;
+    while((r + padr) % BLOCKSIZE != 0) padr++;
+    while((c + padc) % BLOCKSIZE != 0) padc++;
 
-   // dynamically allocate a new MyMatrix to the heap
-	MyMatrix *newmat = new MyMatrix(totalr, totalc, padr, padc);
-   
-   for (int i = 0; i < totalr; i++)
-	{   
-		for (int j = 0; j < totalc; j++)
-		{ 
-			index = i*totalc + j;
-			if ((j < c) && (i < r))
-			{  
-		      (*newmat).data[index] = (float)rand()/(float)RAND_MAX;
-			}
-			else
+    int totalr = padr + r;
+    int totalc = padc + c;
+    int index;
+
+    cout << "generating random matrix" << endl;
+
+    // dynamically allocate a new MyMatrix to the heap
+    MyMatrix *newmat = new MyMatrix(totalr, totalc, padr, padc);
+
+    cout << "populating random matrix" << endl;
+
+    for (int i = 0; i < totalr; i++)
+    {
+        for (int j = 0; j < totalc; j++)
+        {
+            index = i*totalc + j;
+            if ((j < c) && (i < r))
+            {
+                (*newmat).data[index] = (float)rand()/(float)RAND_MAX;
+            }
+            else
          {
-	   		(*newmat).data[index] = 0;	
+            (*newmat).data[index] = 0;
          }
-		}
+        }
     }
-	return newmat;
+    return newmat;
 }
 
 // writes a matrix to a textfile. Depads the matrix (padding is used for internal representation)
@@ -164,18 +163,18 @@ void MyMatrix::writeMatrix(string filename)
 {
   ofstream MatFile;
   MatFile.open(filename.c_str());
-  
+
   MatFile << rows-padr << " " << cols-padc << endl;
   for (int i = 0; i < rows; i++)
   {
-	  for (int j = 0; j < cols; j++)
-	  {
-		   if ((j < cols-padc) && (i < rows-padr))
-			{  
-		         MatFile << setprecision (9) << data[i*cols + j] << "  ";
-			}
-	  }
-	  MatFile << endl;
+      for (int j = 0; j < cols; j++)
+      {
+           if ((j < cols-padc) && (i < rows-padr))
+            {
+                 MatFile << setprecision (9) << data[i*cols + j] << "  ";
+            }
+      }
+      MatFile << endl;
   }
   MatFile.close();
 }
@@ -183,74 +182,91 @@ void MyMatrix::writeMatrix(string filename)
 // I was using this for debugging
 void MyMatrix::writeDifference(MyMatrix &Mat1, MyMatrix &Mat2, string filename)
 {
-	MyMatrix difference (Mat1.rows, Mat1.cols, Mat1.padr, Mat1.padc);
+    MyMatrix difference (Mat1.rows, Mat1.cols, Mat1.padr, Mat1.padc);
     for (int i = 0; i < Mat1.rows*Mat1.cols; i++)
      {      difference.data[i] = Mat1.data[i] - Mat2.data[i];
           if ((difference.data[i] < .01) && (difference.data[i] > -.01))
              difference.data[i] = 0;
      }
-	difference.writeMatrix(filename);
+    difference.writeMatrix(filename);
 }
 
-// multiples two matrices, writes result to file. 
+// multiples two matrices, writes result to file.
 void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m)
 {
-   MyMatrix *Mat1;
-   MyMatrix *Mat2;
-   
-	if (genNew == 1)
-	{	   
-		Mat1 = MyMatrix::generateRandomMatrix(n, p);
-	   Mat2 = MyMatrix::generateRandomMatrix(p, m);
-	}
-   else
-   {
-	   cout << "Reading matrices from file..." << endl;
-	   Mat1 = MyMatrix::readMatrix(filename1);
-	   Mat2 = MyMatrix::readMatrix(filename2);
-   }
+    MyMatrix *Mat1;
+    MyMatrix *Mat2;
 
-	cout << "Multiplying... " << endl;
 
-   // make the call
-	MyMatrix result = result.CUDAMatMatMultiply(*Mat1, *Mat2);
+    if (genNew == 1)
+    {
+        Mat1 = MyMatrix::generateRandomMatrix(n, p);
+        Mat2 = MyMatrix::generateRandomMatrix(p, m);
+    }
+    else
+    {
+        cout << "Reading matrices from file..." << endl;
+        Mat1 = MyMatrix::readMatrix(filename1);
+        Mat2 = MyMatrix::readMatrix(filename2);
+    }
 
-   cout << "Writing output file..." << endl;
-	result.writeMatrix(gpuoutfname);
+    cout << "Multiplying... " << endl;
 
-   if (genNew)
-   {
-      cout << "Writing the random input matrix to a file..." << endl;
-      (*Mat1).writeMatrix(filename1);
-      (*Mat2).writeMatrix(filename2);
-   }
+    // make the call
+    MyMatrix result = result.CUDAMatMatMultiply(*Mat1, *Mat2);
+    cout << "Writing output file..." << endl;
+    result.writeMatrix(gpuoutfname);
 
-   cout << "Done!" << endl<< flush;
-   delete Mat1;
-   delete Mat2;
+    // make the call
+    MyMatrix result9 = result.CUDAMatMatMultiply_cuda9(Mat1, Mat2);
+    cout << "Writing output 9 file..." << endl;
+    result9.writeMatrix("9"+gpuoutfname);
+
+    // CPU calculation
+    MyMatrix *cpuresult = new MyMatrix(Mat1->rows, Mat2->cols, Mat1->padr, Mat2->padc);
+    for(int i = 0; i < n; ++i)
+        for(int j = 0; j < m; ++j)
+            for(int k = 0; k < p; ++k)
+            {
+                 cpuresult->data[i*Mat1->cols+j] += Mat1->data[i*Mat1->cols+k] * Mat2->data[k*Mat2->cols+j];
+            }
+    cout << "Writing CPU output file..." << endl;
+    cpuresult->writeMatrix("cpu"+gpuoutfname);
+
+    if (genNew)
+    {
+        cout << "Writing the random input matrix to a file..." << endl;
+        (*Mat1).writeMatrix(filename1);
+        (*Mat2).writeMatrix(filename2);
+    }
+
+    cout << "Done!" << endl<< flush;
+    delete Mat1;
+    delete Mat2;
+    delete cpuresult;
 }
 
 
-// reads in one matrix, raises it to a given power, writes result to file. 
+// reads in one matrix, raises it to a given power, writes result to file.
 void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, int Times, int n)
-{ 
+{
    MyMatrix *Mat1;
 
-	if (genNew == 1)
-		Mat1 = MyMatrix::generateRandomMatrix(n, n);
+    if (genNew == 1)
+        Mat1 = MyMatrix::generateRandomMatrix(n, n);
    else
    {
-	   cout << "Reading matrix from file..." << endl;
-	   Mat1 = MyMatrix::readMatrix(filename1);
+       cout << "Reading matrix from file..." << endl;
+       Mat1 = MyMatrix::readMatrix(filename1);
    }
 
-	cout << "Multiplying..." << endl;
-	
+    cout << "Multiplying..." << endl;
+
    // MAKE THE CALL
    MyMatrix result = result.CUDAMatPower(*Mat1, Times);
-   
-	cout << "Writing output file..." << endl;
-	result.writeMatrix(gpuoutfname);
+
+    cout << "Writing output file..." << endl;
+    result.writeMatrix(gpuoutfname);
 
    if (genNew)
    {
@@ -258,7 +274,7 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
       (*Mat1).writeMatrix(filename1);
    }
 
-   cout << "Done!" <<endl;	
+   cout << "Done!" <<endl;
 }
 
 
