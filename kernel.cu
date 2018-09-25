@@ -1,33 +1,9 @@
-﻿/*Copyright (c) 2013 Tommy Carpenter
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
-
-#include "MyMatrix.h"
+﻿#include "MyMatrix.h"
 #include "kernel.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 using namespace std;
-
-// hard code block size
-#define BLOCK_SIZE 16
 
 // multiplies two matrices and returns a new matrix
 //intput two mymatrix objects
@@ -46,22 +22,22 @@ MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2)
      int Arows = Mat1.rows;
      int Acols = Mat1.cols;
      int Bcols = Mat2.cols;
-     dim3 dimGrid(ceil((float) Bcols/BLOCK_SIZE), ceil((float) Arows/BLOCK_SIZE));
-    int finalmatsize = Arows*Bcols*sizeof(float);
-     int mat1size = Arows*Acols*sizeof(float);
-     int mat2size = Acols*Bcols*sizeof(float);
+     dim3 dimGrid(ceil((double) Bcols/BLOCK_SIZE), ceil((double) Arows/BLOCK_SIZE));
+    int finalmatsize = Arows*Bcols*sizeof(double);
+     int mat1size = Arows*Acols*sizeof(double);
+     int mat2size = Acols*Bcols*sizeof(double);
 
      // ptrs to input matrices data
-    float *ptr1 = &Mat1.data[0];
-     float *ptr2 = &Mat2.data[0];
+    double *ptr1 = &Mat1.data[0];
+     double *ptr2 = &Mat2.data[0];
 
      // GPU device pointers
-     float *GPUOutMat, *GPUMat1, *GPUMat2;
+     double *GPUOutMat, *GPUMat1, *GPUMat2;
 
      // Output matrix
      MyMatrix OutputMat(Arows, Bcols, Mat1.padr, Mat2.padc);
     // Pointer to output matrix; cuda will copy to this
-     float *outmatptr = &OutputMat.data[0];
+     double *outmatptr = &OutputMat.data[0];
 
      // ready to preform a kernel; record that this even is happeneing
      cudaStatus = cudaEventRecord(startExec, 0);
@@ -132,16 +108,16 @@ MyMatrix MyMatrix::CUDAMatMatMultiply_cuda9(MyMatrix *Mat1, MyMatrix *Mat2)
      int Arows = Mat1->rows;
      int Acols = Mat1->cols;
      int Bcols = Mat2->cols;
-     dim3 dimGrid(ceil((float) Bcols/BLOCK_SIZE), ceil((float) Arows/BLOCK_SIZE));
+     dim3 dimGrid(ceil((double) Bcols/BLOCK_SIZE), ceil((double) Arows/BLOCK_SIZE));
 
      // ptrs to input matrices data
-     float *ptr1 = Mat1->data;
-     float *ptr2 = Mat2->data;
+     double *ptr1 = Mat1->data;
+     double *ptr2 = Mat2->data;
 
      // Output matrix
      MyMatrix OutputMat(Arows, Bcols, Mat1->padr, Mat2->padc);
      // Pointer to output matrix; cuda will copy to this
-     float *outmatptr = OutputMat.data;
+     double *outmatptr = OutputMat.data;
 
      // ready to preform a kernel; record that this even is happeneing
      cudaStatus = cudaEventRecord(startExec, 0);
@@ -189,18 +165,18 @@ MyMatrix MyMatrix::CUDAMatPower(MyMatrix &Mat1, int TIMES)
      // block and thread size stuff
      dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE, 1);
      int width = Mat1.rows;
-     dim3 dimGrid(ceil((float) width/BLOCK_SIZE), ceil((float) width/BLOCK_SIZE));
-     int matsize = width*width*sizeof(float);
+     dim3 dimGrid(ceil((double) width/BLOCK_SIZE), ceil((double) width/BLOCK_SIZE));
+     int matsize = width*width*sizeof(double);
 
      // GPU device pointers
-     float *GPUOutMat, *GPUTempMat;
+     double *GPUOutMat, *GPUTempMat;
 
      // Output matrix
      MyMatrix OutputMat(width, width, Mat1.padr, Mat1.padc);
 
      // pointers to matrix data elements
-    float *ptr1 = &Mat1.data[0]; // on the first iteration we pass this data
-     float *outmatptr = &OutputMat.data[0]; // pass this on all subsequent squares
+    double *ptr1 = &Mat1.data[0]; // on the first iteration we pass this data
+     double *outmatptr = &OutputMat.data[0]; // pass this on all subsequent squares
 
     // ready to preform a kernel; record that this even is happeneing
      cudaStatus = cudaEventRecord(startExec, 0);
@@ -213,7 +189,7 @@ MyMatrix MyMatrix::CUDAMatPower(MyMatrix &Mat1, int TIMES)
     if (cudaStatus != cudaSuccess) { fprintf(stderr, "cudaMalloc failed!");goto Error;}
 
      // keep squaring until the total number is greater than the orginal number asked for
-     for (float T = 2; T <= TIMES; T *=2)
+     for (double T = 2; T <= TIMES; T *=2)
     {    // on the first time pass in the matrix data so it can be squared
        if (T == 2)
          cudaStatus = cudaMemcpy(GPUTempMat, ptr1, matsize, cudaMemcpyHostToDevice); // copy temp to GPU
@@ -255,16 +231,16 @@ Error:
     return OutputMat;
 }
 
-__global__ void addKernel(float *c, const float *a, const float *b)
+__global__ void addKernel(double *c, const double *a, const double *b)
 {
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
 }
 
 // multiplies two matrices and outputs a new matrix
-// input: two mymatrix data floats
-// output none really, mymatrix output float
-__global__ void MatrixMulKernel(float *OutMat, float *Mat1, float *Mat2,  int Arows, int Acols, int Bcols)
+// input: two mymatrix data doubles
+// output none really, mymatrix output double
+__global__ void MatrixMulKernel(double *OutMat, double *Mat1, double *Mat2,  int Arows, int Acols, int Bcols)
 {
     // row and column within submatrix
     int blockrow =  blockIdx.y;//*
@@ -273,11 +249,11 @@ __global__ void MatrixMulKernel(float *OutMat, float *Mat1, float *Mat2,  int Ar
     int col =  threadIdx.x ;
 
     // allocate these arrays only once we can change the values in them later
-    __shared__ float subAshared[BLOCK_SIZE*BLOCK_SIZE];
-    __shared__ float subBshared[BLOCK_SIZE*BLOCK_SIZE];
-    float Cvalue=0;
+    __shared__ double subAshared[BLOCK_SIZE*BLOCK_SIZE];
+    __shared__ double subBshared[BLOCK_SIZE*BLOCK_SIZE];
+    double Cvalue=0;
 
-    for (int B = 0; B < ceil((float)(Acols / BLOCK_SIZE)) + 1; B++)
+    for (int B = 0; B < ceil((double)(Acols / BLOCK_SIZE)) + 1; B++)
     {
         // fetch from global memory
         // yes, these took a LONG time to figure out. Pencil and Paper FTW!
