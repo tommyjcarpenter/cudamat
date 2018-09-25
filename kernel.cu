@@ -231,6 +231,83 @@ Error:
     return OutputMat;
 }
 
+
+
+// Raise a Matrix to a power using CUDA
+// intput, mymatrix, int times
+// output, mymatrix
+MyMatrix MyMatrix::CUDAMatPower_cuda9(MyMatrix *Mat1, int TIMES)
+{
+     // create cuda events for timing
+     cudaError_t cudaStatus;
+     float elapsedTimeExecution;
+     cudaEvent_t startExec, stopExec;
+     cudaEventCreate(&startExec);
+     cudaEventCreate(&stopExec);
+
+     // block and thread size stuff
+     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE, 1);
+     int width = Mat1->rows;
+     dim3 dimGrid(ceil((double) width/BLOCK_SIZE), ceil((double) width/BLOCK_SIZE));
+     int matsize = width*width*sizeof(double);
+
+     // GPU device pointers
+     double *GPUTempMat;
+
+     // Output matrix
+     MyMatrix OutputMat(width, width, Mat1->padr, Mat1->padc);
+
+     // pointers to matrix data elements
+     double *outmatptr = OutputMat.data; // pass this on all subsequent squares
+
+    // ready to preform a kernel; record that this even is happeneing
+     cudaStatus = cudaEventRecord(startExec, 0);
+     if (cudaStatus != cudaSuccess){    fprintf(stderr, "event record failure!"); goto Error;}
+
+     // Allocate GPU buffers for three vectors in GPU global Memory
+     cudaStatus = cudaMalloc((void**)&GPUTempMat, matsize);
+     if (cudaStatus != cudaSuccess) { fprintf(stderr, "cudaMalloc failed!");goto Error;}
+
+     // keep squaring until the total number is greater than the orginal number asked for
+     for (double T = 2; T <= TIMES; T *=2)
+     {
+         // on the first time pass in the matrix data so it can be squared
+         if (T == 2){
+            MatrixMulKernel<<< dimGrid, dimBlock>>>(outmatptr, Mat1->data, Mat1->data, width, width, width);
+         }
+         else{
+             // there is a small change this copy is unnecessary but i dont think the kernel was written to be in-place
+            cudaStatus = cudaMemcpy(GPUTempMat, outmatptr, matsize, cudaMemcpyDeviceToDevice);
+            if (cudaStatus != cudaSuccess) { fprintf(stderr, "cudaMemcpy failed!");    goto Error; }
+            MatrixMulKernel<<< dimGrid, dimBlock>>>(outmatptr, GPUTempMat, GPUTempMat, width, width, width);
+         }
+
+         // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+         cudaStatus = cudaDeviceSynchronize();
+         if (cudaStatus != cudaSuccess)  {fprintf(stderr, "cudaDeviceSynchronize returned error code %d\n", cudaStatus); goto Error;}
+
+      }
+
+   // find the time the execution took
+    cudaEventRecord(stopExec, 0);
+    cudaEventSynchronize(stopExec);
+    if (cudaStatus != cudaSuccess) {fprintf(stderr, "event record failure!"); goto Error; }
+    cudaStatus = cudaEventElapsedTime(&elapsedTimeExecution, startExec, stopExec);
+    if (cudaStatus != cudaSuccess) {fprintf(stderr, "cudaEventElapsedTime returned error code %d!\n", cudaStatus); goto Error;}
+    cout << "Using Cuda Timers, the total kernel execution time was  " << elapsedTimeExecution << "ms" << endl;
+
+Error:
+    // either we have errd, or the program finished natrually.
+    // either way, free all device memory useage!
+    cudaEventDestroy(startExec);
+    cudaEventDestroy(stopExec);
+    cudaFree(GPUTempMat);
+
+    return OutputMat;
+}
+
+
+
 __global__ void addKernel(double *c, const double *a, const double *b)
 {
     int i = threadIdx.x;

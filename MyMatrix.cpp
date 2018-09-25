@@ -241,11 +241,17 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
 
     cout << "Multiplying..." << endl;
 
-   // MAKE THE CALL
-   MyMatrix result = result.CUDAMatPower(*Mat1, Times);
-
+    // MAKE THE CALL
+    MyMatrix result = result.CUDAMatPower(*Mat1, Times);
     cout << "Writing output file..." << endl;
     result.writeMatrix(gpuoutfname);
+
+    // MAKE THE CALL
+    MyMatrix result9 = result.CUDAMatPower_cuda9(Mat1, Times);
+    cout << "Writing output 9 file..." << endl;
+    result9.writeMatrix("9"+gpuoutfname);
+
+
 
    if (genNew)
    {

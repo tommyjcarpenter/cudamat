@@ -5,6 +5,7 @@ mult_input2.txt
 GPUOutput.txt
 9GPUOutput.txt
 cpuGPUOutput.txt
+raise_input.txt
 
 # Prerequisites
 *.d
