@@ -19,7 +19,7 @@ MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
     padr = padrr;
     padc = padcc;
 
-    cout << "allocating memory" << endl;
+    cout << "allocating memory:" << new_rows*new_cols*sizeof(double) << "bytes" << endl;
     cudaError_t cudaStatus = cudaMallocManaged(&data, new_rows*new_cols*sizeof(double));
     if (cudaStatus != cudaSuccess){
         cout << cudaStatus << endl << flush;
@@ -35,17 +35,9 @@ MyMatrix::~MyMatrix(void)
     cudaFree(data); // delete the data array
 }
 
-// print a matrix, used for debugging
-void MyMatrix::printData()
+double MyMatrix::getrc(int r, int c)
 {
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            cout << " " << (data)[i*cols + j];
-        }
-        cout << endl;
-    }
+    return data[r*cols+c];
 }
 
 // reads a matrix from a textfile and returns a pointer to a new MyMatrix object that
@@ -144,30 +136,14 @@ void MyMatrix::writeMatrix(string filename)
   MatFile.open(filename.c_str());
 
   MatFile << rows-padr << " " << cols-padc << endl;
-  for (int i = 0; i < rows; i++)
+  for (int i = 0; i < rows-padr; i++)
   {
-      for (int j = 0; j < cols; j++)
-      {
-           if ((j < cols-padc) && (i < rows-padr))
-            {
-                 MatFile << setprecision (9) << data[i*cols + j] << "  ";
-            }
+      for (int j = 0; j < cols-padc; j++)
+           MatFile << setprecision (16) << data[i*cols + j] << " ";
       }
       MatFile << endl;
   }
   MatFile.close();
-}
-
-// I was using this for debugging
-void MyMatrix::writeDifference(MyMatrix &Mat1, MyMatrix &Mat2, string filename)
-{
-    MyMatrix difference (Mat1.rows, Mat1.cols, Mat1.padr, Mat1.padc);
-    for (int i = 0; i < Mat1.rows*Mat1.cols; i++)
-     {      difference.data[i] = Mat1.data[i] - Mat2.data[i];
-          if ((difference.data[i] < .01) && (difference.data[i] > -.01))
-             difference.data[i] = 0;
-     }
-    difference.writeMatrix(filename);
 }
 
 // multiples two matrices, writes result to file.
@@ -181,6 +157,9 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
     {
         Mat1 = MyMatrix::generateRandomMatrix(n, p);
         Mat2 = MyMatrix::generateRandomMatrix(p, m);
+        cout << "Writing the random input matrix to a file..." << endl;
+        (*Mat1).writeMatrix(filename1);
+        (*Mat2).writeMatrix(filename2);
     }
     else
     {
@@ -189,40 +168,42 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
         Mat2 = MyMatrix::readMatrix(filename2);
     }
 
-    cout << "Multiplying... " << endl;
-
     // make the call
+    cout << "Multiplying... " << endl;
     MyMatrix result = result.CUDAMatMatMultiply(*Mat1, *Mat2);
     cout << "Writing output file..." << endl;
     result.writeMatrix(gpuoutfname);
 
     // make the call
+    cout << "Multiplying... " << endl;
     MyMatrix result9 = result.CUDAMatMatMultiply_cuda9(Mat1, Mat2);
     cout << "Writing output 9 file..." << endl;
     result9.writeMatrix("9"+gpuoutfname);
 
-    // CPU calculation
-    MyMatrix *cpuresult = new MyMatrix(Mat1->rows, Mat2->cols, Mat1->padr, Mat2->padc);
-    for(int i = 0; i < n; ++i)
-        for(int j = 0; j < m; ++j)
-            for(int k = 0; k < p; ++k)
+    // verify against cpu
+    cout << "Verifying against CPU" << endl;
+    for(int i = 0; i < n; i++) //n
+        for(int j = 0; j < m; j++) //m
+        {
+            double s = 0;
+            for(int k = 0; k < p; k++) //p == M2->rows
             {
-                 cpuresult->data[i*Mat1->cols+j] += Mat1->data[i*Mat1->cols+k] * Mat2->data[k*Mat2->cols+j];
+                 // essentially doing a dot product of ith row of M1 and jth column of M2
+                 // ith row of M1 starts at i*Mat1->cols. Then we iterate over k up to cols
+                 // kth row of M2 starts at k*Mat2->cols, then offset by j to get jth column
+                 //resultmat[i][j] += m1[i][k] * m2[k][j]
+                 s +=  Mat1->getrc(i,k) * Mat2->getrc(k,j);
             }
-    cout << "Writing CPU output file..." << endl;
-    cpuresult->writeMatrix("cpu"+gpuoutfname);
+            double difference = result9.getrc(i, j) - s;
+            if (difference < -.001 || difference > .001){
+                cout << "MATCH FAILURE!" << " gpu=" << result9.data[i*Mat2->cols+j] << " cpu=" << s << endl;
+            }
 
-    if (genNew)
-    {
-        cout << "Writing the random input matrix to a file..." << endl;
-        (*Mat1).writeMatrix(filename1);
-        (*Mat2).writeMatrix(filename2);
-    }
+        }
 
     cout << "Done!" << endl<< flush;
     delete Mat1;
     delete Mat2;
-    delete cpuresult;
 }
 
 

@@ -19,10 +19,11 @@ class MyMatrix
         int rows;
         int cols;
 
+        //getter
+        double getrc(int r, int c);
+
         // reading/writing functions
-        void printData();
         void writeMatrix(string filename);
-        void writeDifference(MyMatrix &Mat1, MyMatrix &Mat2, string filename);
 
         // cuda matrix operations
         MyMatrix CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2);
