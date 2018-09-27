@@ -225,7 +225,7 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
             }
         } // end this round
         // copy for next round
-        for (int i=0; i<n*n; i++)
+        for (unsigned int i=0; i<n*n; i++)
             tempdata[i] = resultdata[i];
     }
 

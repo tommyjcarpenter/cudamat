@@ -6,7 +6,7 @@ CUDAPATH=/usr/local/cuda/lib64
 GPPOPTIONS += -fexceptions
 
 #Linting style flags from https://stackoverflow.com/questions/5088460/flags-to-enable-thorough-and-verbose-g-warnings
-GPPOPTIONS += -pedantic -W -Wall -Werror -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-declarations -Wmissing-include-dirs -Wnoexcept -Wold-style-cast
+GPPOPTIONS += -pedantic -W -Wall -Werror -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-declarations -Wmissing-include-dirs -Wnoexcept -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wshadow -Wstrict-null-sentinel -Wstrict-overflow=5 -Wswitch-default -Wundef -Wno-unused -Wconversion -Wpadded  -Wunsafe-loop-optimizations
 
 NVCCOPTIONS += -Xlinker -rpath,$(CUDAPATH)
 
