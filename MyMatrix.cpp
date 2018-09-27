@@ -9,6 +9,8 @@
 
 using namespace std;
 
+static double Randomdouble(double a, double b);
+
 // constructor for MyMatrix, a matrix with padding for GPU purposes
 MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
 {
@@ -100,7 +102,6 @@ MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
 
     int totalr = padr + r;
     int totalc = padc + c;
-    int index;
 
     cout << "generating random matrix" << endl;
 
@@ -111,7 +112,7 @@ MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
 
     for (int i = 0; i < totalr; i++)
         for (int j = 0; j < totalc; j++)
-            (*newmat).data[i*totalc + j] = ( (j < c && i < r) ? Randomdouble(1.0, 10.0) : 0);
+            (*newmat).data[i*totalc + j] = ( (j < c && i < r) ? Randomdouble(-10.0, 10.0) : 0);
     return newmat;
 }
 
@@ -206,8 +207,6 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
     // verify against cpu
     // this is not an efficient algorithm, the only goal here is to check the GPU results
     cout << "Verifying against CPU" << endl;
-    MyMatrix *whichmat;
-
     double *resultdata = new double[n*n];
     double *tempdata = new double[n*n];
 
