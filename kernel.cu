@@ -8,93 +8,7 @@ using namespace std;
 // multiplies two matrices and returns a new matrix
 //intput two mymatrix objects
 // output mymatrix
-MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2)
-{
-     // create cuda events for timing
-     cudaError_t cudaStatus;
-     float elapsedTimeExecution;
-     cudaEvent_t startExec, stopExec;
-     cudaEventCreate(&startExec);
-     cudaEventCreate(&stopExec);
-
-    // various paramaters we need
-     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE, 1);
-     int Arows = Mat1.rows;
-     int Acols = Mat1.cols;
-     int Bcols = Mat2.cols;
-     dim3 dimGrid(ceil((double) Bcols/BLOCK_SIZE), ceil((double) Arows/BLOCK_SIZE));
-    int finalmatsize = Arows*Bcols*sizeof(double);
-     int mat1size = Arows*Acols*sizeof(double);
-     int mat2size = Acols*Bcols*sizeof(double);
-
-     // ptrs to input matrices data
-    double *ptr1 = &Mat1.data[0];
-     double *ptr2 = &Mat2.data[0];
-
-     // GPU device pointers
-     double *GPUOutMat, *GPUMat1, *GPUMat2;
-
-     // Output matrix
-     MyMatrix OutputMat(Arows, Bcols, Mat1.padr, Mat2.padc);
-    // Pointer to output matrix; cuda will copy to this
-     double *outmatptr = &OutputMat.data[0];
-
-     // ready to preform a kernel; record that this even is happeneing
-     cudaStatus = cudaEventRecord(startExec, 0);
-     if (cudaStatus != cudaSuccess){    fprintf(stderr, "event record failure!"); goto Error;}
-
-     // Allocate GPU buffers for three vectors in GPU global Memory
-    cudaStatus = cudaMalloc((void**)&GPUOutMat, finalmatsize);
-     cudaStatus = cudaMalloc((void**)&GPUMat1, mat1size);
-     cudaStatus = cudaMalloc((void**)&GPUMat2, mat2size);
-    if (cudaStatus != cudaSuccess) {fprintf(stderr, "cudaMalloc failed!"); goto Error;}
-
-
-     // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(GPUMat1, ptr1, mat1size, cudaMemcpyHostToDevice);
-     cudaStatus = cudaMemcpy(GPUMat2, ptr2, mat2size, cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) { fprintf(stderr, "cudaMemcpy failed!"); goto Error; }
-
-    // CUDA KERNEL CALL
-     MatrixMulKernel<<< dimGrid, dimBlock>>>(GPUOutMat, GPUMat1, GPUMat2, Arows, Acols, Bcols);
-
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
-
-    // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(outmatptr, GPUOutMat, finalmatsize, cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) { fprintf(stderr, "cudaMemcpy failed!"); goto Error; }
-
-     // find the time the execution took
-     cudaEventRecord(stopExec, 0);
-     cudaEventSynchronize(stopExec);
-     if (cudaStatus != cudaSuccess) {fprintf(stderr, "event record failure!"); goto Error; }
-     cudaStatus = cudaEventElapsedTime(&elapsedTimeExecution, startExec, stopExec);
-     if (cudaStatus != cudaSuccess) {fprintf(stderr, "cudaEventElapsedTime returned error code %d!\n", cudaStatus); goto Error;}
-     cout << "Using Cuda Timers, the total kernel execution time was  " << elapsedTimeExecution << "ms" << endl;
-
-Error:
-    // either we have errd, or the program finished natrually.
-    // either way, free all device memory useage!
-    cudaEventDestroy(startExec);
-    cudaEventDestroy(stopExec);
-   cudaFree(GPUOutMat);
-   cudaFree(GPUMat1);
-   cudaFree(GPUMat2);
-
-    return OutputMat;
-}
-
-
-// multiplies two matrices and returns a new matrix
-//intput two mymatrix objects
-// output mymatrix
-MyMatrix MyMatrix::CUDAMatMatMultiply_cuda9(MyMatrix *Mat1, MyMatrix *Mat2)
+MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2)
 {
      // create cuda events for timing
      cudaError_t cudaStatus;
@@ -260,7 +174,7 @@ MyMatrix MyMatrix::CUDAMatPower_cuda9(MyMatrix *Mat1, int TIMES)
      // pointers to matrix data elements
      double *outmatptr = OutputMat.data; // pass this on all subsequent squares
 
-    // ready to preform a kernel; record that this even is happeneing
+     // ready to preform a kernel; record that this even is happeneing
      cudaStatus = cudaEventRecord(startExec, 0);
      if (cudaStatus != cudaSuccess){    fprintf(stderr, "event record failure!"); goto Error;}
 
@@ -288,7 +202,7 @@ MyMatrix MyMatrix::CUDAMatPower_cuda9(MyMatrix *Mat1, int TIMES)
 
       }
 
-   // find the time the execution took
+    // find the time the execution took
     cudaEventRecord(stopExec, 0);
     cudaEventSynchronize(stopExec);
     if (cudaStatus != cudaSuccess) {fprintf(stderr, "event record failure!"); goto Error; }

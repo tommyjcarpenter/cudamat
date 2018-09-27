@@ -27,6 +27,8 @@ CUDAPATH=/usr/local/cuda/lib64
 
 GPPOPTIONS += -O -fexceptions
 
+GPPOPTIONS += -pedantic
+
 NVCCOPTIONS += -Xlinker -rpath,$(CUDAPATH)
 
 LIBRARIES += -L$(CUDAPATH) -lcudart -lcuda

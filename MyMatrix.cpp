@@ -157,16 +157,10 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
     }
 
     // make the call
-    cout << "Multiplying... " << endl;
+    cout << "CUDA Multiplying... " << endl;
     MyMatrix result = result.CUDAMatMatMultiply(*Mat1, *Mat2);
     cout << "Writing output file..." << endl;
     result.writeMatrix(gpuoutfname);
-
-    // make the call
-    cout << "Multiplying... " << endl;
-    MyMatrix result9 = result.CUDAMatMatMultiply_cuda9(Mat1, Mat2);
-    cout << "Writing output 9 file..." << endl;
-    result9.writeMatrix("9"+gpuoutfname);
 
     // verify against cpu
     cout << "Verifying against CPU" << endl;
@@ -176,9 +170,9 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
             for(int k = 0; k < p; k++) //p == M2->rows
                 // essentially doing a dot product of ith row of M1 and jth column of M2
                 s +=  Mat1->getrc(i,k) * Mat2->getrc(k,j);
-            double difference = result9.getrc(i, j) - s;
+            double difference = result.getrc(i, j) - s;
             if (difference < -.001 || difference > .001) {
-                cout << "MATCH FAILURE!" << " gpu=" << result9.data[i*Mat2->cols+j] << " cpu=" << s << endl;
+                cout << "MATCH FAILURE!" << " gpu=" << result.data[i*Mat2->cols+j] << " cpu=" << s << endl;
             }
         }
     }
