@@ -201,14 +201,9 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
     cout << "Multiplying..." << endl;
 
     // MAKE THE CALL
-    MyMatrix result = result.CUDAMatPower(*Mat1, Times);
+    MyMatrix result = result.CUDAMatPower(Mat1, Times);
     cout << "Writing output file..." << endl;
     result.writeMatrix(gpuoutfname);
-
-    // MAKE THE CALL
-    MyMatrix result9 = result.CUDAMatPower_cuda9(Mat1, Times);
-    cout << "Writing output 9 file..." << endl;
-    result9.writeMatrix("9"+gpuoutfname);
 
     // verify against cpu
     // this is not an efficient algorithm, the only goal here is to check the GPU results
@@ -217,6 +212,7 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
 
     double *resultdata = new double[n*n];
     double *tempdata = new double[n*n];
+
     // copy to start
     for(int i = 0; i < n; i++)
         for(int j = 0; j < n; j++)
@@ -239,9 +235,9 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
     // comparison
     for(int i=0; i<n; i++) {
         for(int j=0; j<n; j++) {
-            double difference = result9.getrc(i, j) - resultdata[i*n+j];
+            double difference = result.getrc(i, j) - resultdata[i*n+j];
             if (difference < -.01 || difference > .01) {
-                cout << "MATCH FAILURE!" << " gpu=" << result9.getrc(i,j) << " cpu=" << resultdata[i*n+j]  << endl;
+                cout << "MATCH FAILURE!" << " gpu=" << result.getrc(i,j) << " cpu=" << resultdata[i*n+j]  << endl;
             }
         }
     }
