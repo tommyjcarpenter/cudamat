@@ -4,6 +4,8 @@
 #include <valarray>
 #include <iostream>
 
+#define BLOCKSIZE 32
+
 using namespace std;
 
 class MyMatrix

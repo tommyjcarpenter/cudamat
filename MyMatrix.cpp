@@ -7,8 +7,6 @@
 #include <exception>
 #include "cuda_runtime.h"
 
-#define BLOCKSIZE 512
-
 using namespace std;
 
 // constructor for MyMatrix, a matrix with padding for GPU purposes

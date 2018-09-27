@@ -18,11 +18,11 @@ MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2)
      cudaEventCreate(&stopExec);
 
     // various paramaters we need
-     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE, 1);
+     dim3 dimBlock(BLOCKSIZE, BLOCKSIZE, 1);
      int Arows = Mat1->rows;
      int Acols = Mat1->cols;
      int Bcols = Mat2->cols;
-     dim3 dimGrid(ceil((double) Bcols/BLOCK_SIZE), ceil((double) Arows/BLOCK_SIZE));
+     dim3 dimGrid(ceil((double) Bcols/BLOCKSIZE), ceil((double) Arows/BLOCKSIZE));
 
      // ptrs to input matrices data
      double *ptr1 = Mat1->data;
@@ -77,9 +77,9 @@ MyMatrix MyMatrix::CUDAMatPower(MyMatrix *Mat1, int TIMES)
      cudaEventCreate(&stopExec);
 
      // block and thread size stuff
-     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE, 1);
+     dim3 dimBlock(BLOCKSIZE, BLOCKSIZE, 1);
      int width = Mat1->rows;
-     dim3 dimGrid(ceil((double) width/BLOCK_SIZE), ceil((double) width/BLOCK_SIZE));
+     dim3 dimGrid(ceil((double) width/BLOCKSIZE), ceil((double) width/BLOCKSIZE));
      int matsize = width*width*sizeof(double);
 
      // GPU device pointers
@@ -156,34 +156,34 @@ __global__ void MatrixMulKernel(double *OutMat, double *Mat1, double *Mat2,  int
     int col =  threadIdx.x ;
 
     // allocate these arrays only once we can change the values in them later
-    __shared__ double subAshared[BLOCK_SIZE*BLOCK_SIZE];
-    __shared__ double subBshared[BLOCK_SIZE*BLOCK_SIZE];
+    __shared__ double subAshared[BLOCKSIZE*BLOCKSIZE];
+    __shared__ double subBshared[BLOCKSIZE*BLOCKSIZE];
     double Cvalue=0;
 
-    for (int B = 0; B < ceil((double)(Acols / BLOCK_SIZE)) + 1; B++)
+    for (int B = 0; B < ceil((double)(Acols / BLOCKSIZE)) + 1; B++)
     {
         // fetch from global memory
         // yes, these took a LONG time to figure out. Pencil and Paper FTW!
-        int Mat1index = (row + blockrow*BLOCK_SIZE)*Acols + col + B*BLOCK_SIZE;
-        int Mat2index = (B*BLOCK_SIZE + row)*Bcols + BLOCK_SIZE*blockcol + col;
+        int Mat1index = (row + blockrow*BLOCKSIZE)*Acols + col + B*BLOCKSIZE;
+        int Mat2index = (B*BLOCKSIZE + row)*Bcols + BLOCKSIZE*blockcol + col;
 
         if (Mat1index < Arows*Acols)
-            subAshared[row*BLOCK_SIZE + col] = Mat1[Mat1index];
+            subAshared[row*BLOCKSIZE + col] = Mat1[Mat1index];
         else
-            subAshared[row*BLOCK_SIZE + col] = 0;
+            subAshared[row*BLOCKSIZE + col] = 0;
 
         if (Mat2index < Acols*Bcols)
-            subBshared[row*BLOCK_SIZE + col] = Mat2[Mat2index];
+            subBshared[row*BLOCKSIZE + col] = Mat2[Mat2index];
         else
-            subBshared[row*BLOCK_SIZE + col] = 0;
+            subBshared[row*BLOCKSIZE + col] = 0;
 
         __syncthreads();
 
-        for (int j = 0; j < BLOCK_SIZE; j++)
+        for (int j = 0; j < BLOCKSIZE; j++)
         {
-            if ((row*BLOCK_SIZE + j < BLOCK_SIZE*BLOCK_SIZE) && (j*BLOCK_SIZE + col < BLOCK_SIZE*BLOCK_SIZE))
+            if ((row*BLOCKSIZE + j < BLOCKSIZE*BLOCKSIZE) && (j*BLOCKSIZE + col < BLOCKSIZE*BLOCKSIZE))
             {
-                Cvalue += subAshared[row*BLOCK_SIZE + j]*subBshared[j*BLOCK_SIZE + col];
+                Cvalue += subAshared[row*BLOCKSIZE + j]*subBshared[j*BLOCKSIZE + col];
             }
         }
 
@@ -192,8 +192,8 @@ __global__ void MatrixMulKernel(double *OutMat, double *Mat1, double *Mat2,  int
     }
     if ((row < Arows) && (col < Bcols))
     {
-        int finalmatrow = blockrow*BLOCK_SIZE + row;
-        int finalmatcol = blockcol*BLOCK_SIZE + col;
+        int finalmatrow = blockrow*BLOCKSIZE + row;
+        int finalmatcol = blockcol*BLOCKSIZE + col;
         OutMat[finalmatrow*Bcols +  finalmatcol] = Cvalue;
     }
 }
