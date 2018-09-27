@@ -20,20 +20,25 @@
 
 # Last tested on Arch Linux using cuda9.2 in Sept 2018
 
-CUDAPATH=/opt/cuda/lib64
+#Arch
+#CUDAPATH=/opt/cuda/lib64
+#Ubuntu
+CUDAPATH=/usr/local/cuda/lib64
 
 GPPOPTIONS += -O -fexceptions
 
+GPPOPTIONS += -pedantic
+
 NVCCOPTIONS += -Xlinker -rpath,$(CUDAPATH)
 
-LIBRARIES += -L$(CUDAPATH) -lcudart #lcuda
+LIBRARIES += -L$(CUDAPATH) -lcudart -lcuda
 
 # Debug/release configuration
 ifeq ($(dbg),1)
 	GPPOPTIONS  += -g -D_DEBUG
 	NVCCOPTIONS += -D_DEBUG -G -g
 else 
-	GPPOPTIONS  += -O2 -fno-strict-aliasing -DNDEBUG
+	GPPOPTIONS  += -O2 -fno-strict-aliasing
 	NVCCOPTIONS += --compiler-options -fno-strict-aliasing 
 endif
 
