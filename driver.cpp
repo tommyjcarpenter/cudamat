@@ -11,10 +11,12 @@ using namespace std;
 int main(int argc, char** argv)
 {
 
+    (void)argc; //https://stackoverflow.com/questions/40776233/how-do-i-get-rid-of-the-unused-parameter-warning-in-c-with-gcc-4-8-4-wunused-p
+
    string FUNC = argv[1];
 
    // set random to read based on time
-   srand((unsigned)time(0));
+   srand(static_cast<unsigned>(time(0)));
 
    if (FUNC == "--help")
    {

@@ -247,7 +247,7 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
 
 // stolen from https://stackoverflow.com/questions/5289613/generate-random-float-between-two-floats
 static double Randomdouble(double a, double b) {
-    double random = ((double) rand()) / (double) RAND_MAX;
+    double random = (static_cast<double>(rand())) / static_cast<double>(RAND_MAX);
     double diff = b - a;
     double r = random * diff;
     return a + r;

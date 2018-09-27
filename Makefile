@@ -3,10 +3,10 @@
 #Ubuntu
 CUDAPATH=/usr/local/cuda/lib64
 
-GPPOPTIONS += -O -fexceptions
+GPPOPTIONS += -fexceptions
 
 #Linting style flags from https://stackoverflow.com/questions/5088460/flags-to-enable-thorough-and-verbose-g-warnings
-GPPOPTIONS += -pedantic -Wall
+GPPOPTIONS += -pedantic -W -Wall -Werror -Wextra -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-declarations -Wmissing-include-dirs -Wnoexcept -Wold-style-cast
 
 NVCCOPTIONS += -Xlinker -rpath,$(CUDAPATH)
 
@@ -17,7 +17,7 @@ ifeq ($(dbg),1)
 	GPPOPTIONS  += -g -D_DEBUG
 	NVCCOPTIONS += -D_DEBUG -G -g
 else 
-	GPPOPTIONS  += -O2 -fno-strict-aliasing
+	GPPOPTIONS  += -O3 -fno-strict-aliasing
 	NVCCOPTIONS += --compiler-options -fno-strict-aliasing 
 endif
 
