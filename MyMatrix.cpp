@@ -112,20 +112,8 @@ MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
     cout << "populating random matrix" << endl;
 
     for (int i = 0; i < totalr; i++)
-    {
         for (int j = 0; j < totalc; j++)
-        {
-            index = i*totalc + j;
-            if ((j < c) && (i < r))
-            {
-                (*newmat).data[index] = (double)rand()/(double)RAND_MAX;
-            }
-            else
-         {
-            (*newmat).data[index] = 0;
-         }
-        }
-    }
+            (*newmat).data[i*totalc + j] = ( (j < c && i < r) ? Randomdouble(1.0, 1000.0) : 0);
     return newmat;
 }
 
@@ -138,7 +126,7 @@ void MyMatrix::writeMatrix(string filename)
   MatFile << rows-padr << " " << cols-padc << endl;
   for (int i = 0; i < rows-padr; i++)
   {
-      for (int j = 0; j < cols-padc; j++)
+      for (int j = 0; j < cols-padc; j++){
            MatFile << setprecision (16) << data[i*cols + j] << " ";
       }
       MatFile << endl;
@@ -182,24 +170,18 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
 
     // verify against cpu
     cout << "Verifying against CPU" << endl;
-    for(int i = 0; i < n; i++) //n
-        for(int j = 0; j < m; j++) //m
-        {
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < m; j++) {
             double s = 0;
             for(int k = 0; k < p; k++) //p == M2->rows
-            {
-                 // essentially doing a dot product of ith row of M1 and jth column of M2
-                 // ith row of M1 starts at i*Mat1->cols. Then we iterate over k up to cols
-                 // kth row of M2 starts at k*Mat2->cols, then offset by j to get jth column
-                 //resultmat[i][j] += m1[i][k] * m2[k][j]
-                 s +=  Mat1->getrc(i,k) * Mat2->getrc(k,j);
-            }
+                // essentially doing a dot product of ith row of M1 and jth column of M2
+                s +=  Mat1->getrc(i,k) * Mat2->getrc(k,j);
             double difference = result9.getrc(i, j) - s;
-            if (difference < -.001 || difference > .001){
+            if (difference < -.001 || difference > .001) {
                 cout << "MATCH FAILURE!" << " gpu=" << result9.data[i*Mat2->cols+j] << " cpu=" << s << endl;
             }
-
         }
+    }
 
     cout << "Done!" << endl<< flush;
     delete Mat1;
@@ -210,15 +192,17 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
 // reads in one matrix, raises it to a given power, writes result to file.
 void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, int Times, int n)
 {
-   MyMatrix *Mat1;
+    MyMatrix *Mat1;
 
-    if (genNew == 1)
+    if (genNew == 1) {
         Mat1 = MyMatrix::generateRandomMatrix(n, n);
-   else
-   {
-       cout << "Reading matrix from file..." << endl;
-       Mat1 = MyMatrix::readMatrix(filename1);
-   }
+         cout << "Writing the random input matrix to a file..." << endl;
+        (*Mat1).writeMatrix(filename1);
+    }
+    else {
+        cout << "Reading matrix from file..." << endl;
+        Mat1 = MyMatrix::readMatrix(filename1);
+    }
 
     cout << "Multiplying..." << endl;
 
@@ -232,16 +216,13 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
     cout << "Writing output 9 file..." << endl;
     result9.writeMatrix("9"+gpuoutfname);
 
-
-
-   if (genNew)
-   {
-      cout << "Writing the random input matrix to a file..." << endl;
-      (*Mat1).writeMatrix(filename1);
-   }
-
-   cout << "Done!" <<endl;
+    cout << "Done!" <<endl;
 }
 
-
-
+// stolen from https://stackoverflow.com/questions/5289613/generate-random-float-between-two-floats
+static double Randomdouble(double a, double b) {
+    double random = ((double) rand()) / (double) RAND_MAX;
+    double diff = b - a;
+    double r = random * diff;
+    return a + r;
+}

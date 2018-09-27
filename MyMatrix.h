@@ -8,7 +8,6 @@ using namespace std;
 
 class MyMatrix
 {
-
     public:
         MyMatrix(int new_rows, int new_cols, int padr, int padt);
         ~MyMatrix(void);
@@ -37,3 +36,5 @@ class MyMatrix
         static void multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m);
         static void raisePowerOf2(string filename1, string gpuoutfname, int genNewm, int Times, int n);
 };
+
+static double Randomdouble(double a, double b);
