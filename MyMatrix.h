@@ -25,7 +25,7 @@ class MyMatrix
         void writeMatrix(string filename);
 
         // cuda matrix operations
-        MyMatrix CUDAMatMatMultiply(MyMatrix &Mat1, MyMatrix &Mat2);
+        MyMatrix CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2);
         MyMatrix CUDAMatPower( MyMatrix &Mat1, int times);
         MyMatrix CUDAMatPower_cuda9( MyMatrix *Mat1, int times);
 

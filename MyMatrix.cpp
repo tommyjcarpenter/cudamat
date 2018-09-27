@@ -113,7 +113,7 @@ MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
 
     for (int i = 0; i < totalr; i++)
         for (int j = 0; j < totalc; j++)
-            (*newmat).data[i*totalc + j] = ( (j < c && i < r) ? Randomdouble(1.0, 1000.0) : 0);
+            (*newmat).data[i*totalc + j] = ( (j < c && i < r) ? Randomdouble(1.0, 10.0) : 0);
     return newmat;
 }
 
@@ -158,7 +158,7 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
 
     // make the call
     cout << "CUDA Multiplying... " << endl;
-    MyMatrix result = result.CUDAMatMatMultiply(*Mat1, *Mat2);
+    MyMatrix result = result.CUDAMatMatMultiply(Mat1, Mat2);
     cout << "Writing output file..." << endl;
     result.writeMatrix(gpuoutfname);
 
@@ -172,7 +172,7 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
                 s +=  Mat1->getrc(i,k) * Mat2->getrc(k,j);
             double difference = result.getrc(i, j) - s;
             if (difference < -.001 || difference > .001) {
-                cout << "MATCH FAILURE!" << " gpu=" << result.data[i*Mat2->cols+j] << " cpu=" << s << endl;
+                cout << "MATCH FAILURE!" << " gpu=" << result.getrc(i, j) << " cpu=" << s << endl;
             }
         }
     }
@@ -210,7 +210,46 @@ void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, i
     cout << "Writing output 9 file..." << endl;
     result9.writeMatrix("9"+gpuoutfname);
 
+    // verify against cpu
+    // this is not an efficient algorithm, the only goal here is to check the GPU results
+    cout << "Verifying against CPU" << endl;
+    MyMatrix *whichmat;
+
+    double *resultdata = new double[n*n];
+    double *tempdata = new double[n*n];
+    // copy to start
+    for(int i = 0; i < n; i++)
+        for(int j = 0; j < n; j++)
+            tempdata[i*n+j] = Mat1->getrc(i,j);
+
+    // cpu computation
+    for (int T = 2; T <= Times; T *=2) {
+        for(int i = 0; i < n; i++) {
+            for(int j = 0; j < n; j++)  { //m=n, square
+                resultdata[i*n+j] = 0.0;
+                for(int k = 0; k < n; k++) //p=n, square
+                    resultdata[i*n+j] += tempdata[i*n+k] * tempdata[k*n+j];
+            }
+        } // end this round
+        // copy for next round
+        for (int i=0; i<n*n; i++)
+            tempdata[i] = resultdata[i];
+    }
+
+    // comparison
+    for(int i=0; i<n; i++) {
+        for(int j=0; j<n; j++) {
+            double difference = result9.getrc(i, j) - resultdata[i*n+j];
+            if (difference < -.01 || difference > .01) {
+                cout << "MATCH FAILURE!" << " gpu=" << result9.getrc(i,j) << " cpu=" << resultdata[i*n+j]  << endl;
+            }
+        }
+    }
+
     cout << "Done!" <<endl;
+    delete Mat1;
+    delete resultdata;
+    delete tempdata;
 }
 
 // stolen from https://stackoverflow.com/questions/5289613/generate-random-float-between-two-floats
