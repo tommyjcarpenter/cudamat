@@ -12,8 +12,7 @@ using namespace std;
 static double Randomdouble(double a, double b);
 
 // constructor for MyMatrix, a matrix with padding for GPU purposes
-MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
-{
+MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc) {
     rows = new_rows;
     cols = new_cols;
     padr = padrr;
@@ -21,7 +20,7 @@ MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
 
     cout << "allocating memory:" << new_rows*new_cols*sizeof(double) << "bytes" << endl;
     cudaError_t cudaStatus = cudaMallocManaged(&data, new_rows*new_cols*sizeof(double));
-    if (cudaStatus != cudaSuccess){
+    if (cudaStatus != cudaSuccess) {
         cout << cudaStatus << endl << flush;
         exit(1);
     }
@@ -30,13 +29,11 @@ MyMatrix::MyMatrix(int new_rows, int new_cols, int padrr, int padcc)
 }
 
 // destructor
-MyMatrix::~MyMatrix(void)
-{
+MyMatrix::~MyMatrix(void) {
     cudaFree(data); // delete the data array
 }
 
-double MyMatrix::getrc(int r, int c)
-{
+double MyMatrix::getrc(int r, int c) {
     return data[r*cols+c];
 }
 
@@ -46,13 +43,12 @@ double MyMatrix::getrc(int r, int c)
 // input: filename to read from
 // output: MyMatrix object pointer
 // side effects: none
-MyMatrix *MyMatrix::readMatrix(string filename)
-{
+MyMatrix *MyMatrix::readMatrix(string filename) {
    ifstream myReadFile;
    myReadFile.open(filename.c_str());
 
     int r, c;
-   myReadFile >> r >> c;
+    myReadFile >> r >> c;
 
     // we need to pad the matrix so that the size is a multiple of blocksize.
     int padr = 0;
@@ -65,24 +61,18 @@ MyMatrix *MyMatrix::readMatrix(string filename)
     int totalr = padr + r;
     int totalc = padc + c;
 
-   // dynamically allocate a new mymatrix object
+    // dynamically allocate a new mymatrix object
     MyMatrix *newmat = new MyMatrix(totalr, totalc, padr, padc);
     int index;
 
-   //cout << "pritning r: " << r << "printing c: " << c << "totalc:" << totalc << " total r: " << totalr << endl;
-    for (int i = 0; i < totalr; i++)
-    {
-        for (int j = 0; j < totalc; j++)
-        {
+    //cout << "pritning r: " << r << "printing c: " << c << "totalc:" << totalc << " total r: " << totalr << endl;
+    for (int i = 0; i < totalr; i++) {
+        for (int j = 0; j < totalc; j++) {
             index = i*totalc + j;
             if ((j < c) && (i < r))
-            {
-              myReadFile >> (*newmat).data[index];
-            }
+                myReadFile >> (*newmat).data[index];
             else
-         {
-            (*newmat).data[index] = 0;
-         }
+                (*newmat).data[index] = 0;
         }
     }
     myReadFile.close();
@@ -90,8 +80,7 @@ MyMatrix *MyMatrix::readMatrix(string filename)
 }
 
 // takes in rows and columns and generates a random matrix. Returns a pointer to that dynamically allocated matrix.
-MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
-{
+MyMatrix *MyMatrix::generateRandomMatrix(int r, int c) {
 
     // we need to pad the matrix so that the size is a multiple of BLOCKSIZE.
     int padr = 0;
@@ -117,39 +106,32 @@ MyMatrix *MyMatrix::generateRandomMatrix(int r, int c)
 }
 
 // writes a matrix to a textfile. Depads the matrix (padding is used for internal representation)
-void MyMatrix::writeMatrix(string filename)
-{
+void MyMatrix::writeMatrix(string filename) {
   ofstream MatFile;
   MatFile.open(filename.c_str());
 
   MatFile << rows-padr << " " << cols-padc << endl;
-  for (int i = 0; i < rows-padr; i++)
-  {
-      for (int j = 0; j < cols-padc; j++){
+  for (int i = 0; i < rows-padr; i++) {
+      for (int j = 0; j < cols-padc; j++)
            MatFile << setprecision (16) << data[i*cols + j] << " ";
-      }
       MatFile << endl;
   }
   MatFile.close();
 }
 
 // multiples two matrices, writes result to file.
-void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m)
-{
+void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, int genNew, int n, int p, int m) {
     MyMatrix *Mat1;
     MyMatrix *Mat2;
 
-
-    if (genNew == 1)
-    {
+    if (genNew == 1) {
         Mat1 = MyMatrix::generateRandomMatrix(n, p);
         Mat2 = MyMatrix::generateRandomMatrix(p, m);
         cout << "Writing the random input matrix to a file..." << endl;
         (*Mat1).writeMatrix(filename1);
         (*Mat2).writeMatrix(filename2);
     }
-    else
-    {
+    else {
         cout << "Reading matrices from file..." << endl;
         Mat1 = MyMatrix::readMatrix(filename1);
         Mat2 = MyMatrix::readMatrix(filename2);
@@ -183,8 +165,7 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
 
 
 // reads in one matrix, raises it to a given power, writes result to file.
-void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, int Times, int n)
-{
+void MyMatrix::raisePowerOf2(string filename1, string gpuoutfname, int genNew, int Times, int n) {
     MyMatrix *Mat1;
 
     if (genNew == 1) {
