@@ -1,7 +1,8 @@
 #Arch
 #CUDAPATH=/opt/cuda/lib64
 #Ubuntu
-CUDAPATH=/usr/local/cuda/lib64
+CUDAPATH=/usr/local/cuda/lib64/
+GPPINCLUDES=-I /usr/local/cuda/include/
 
 GPPOPTIONS += -fexceptions
 
