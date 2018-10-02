@@ -5,12 +5,21 @@
 
 using namespace std;
 
+// this amazingly nice error checking function is stolen from:
+//https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+    if (code != cudaSuccess) {
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
+    }
+}
+
 // multiplies two matrices and returns a new matrix
 //intput two mymatrix objects
 // output mymatrix
 MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2) {
     // create cuda events for timing
-    cudaError_t cudaStatus;
     float elapsedTimeExecution;
     cudaEvent_t startExec, stopExec;
     cudaEventCreate(&startExec);
@@ -33,38 +42,27 @@ MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2) {
     double *outmatptr = OutputMat.data;
 
     // ready to preform a kernel; record that this even is happeneing
-    cudaStatus = cudaEventRecord(startExec, 0);
-    if (cudaStatus != cudaSuccess){ fprintf(stderr, "event record failure!"); goto Error;}
+    gpuErrchk(cudaEventRecord(startExec, 0));
 
     // CUDA KERNEL CALL
     MatrixMulKernel<<< dimGrid, dimBlock>>>(outmatptr, ptr1, ptr2, Arows, Acols, Bcols);
 
     // cudaDeviceSynchronize waits for the kernel to finish, and returns
     // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
+    gpuErrchk(cudaDeviceSynchronize());
 
     // find the time the execution took
-    cudaEventRecord(stopExec, 0);
-    cudaEventSynchronize(stopExec);
-    if (cudaStatus != cudaSuccess) {fprintf(stderr, "event record failure!"); goto Error; }
-    cudaStatus = cudaEventElapsedTime(&elapsedTimeExecution, startExec, stopExec);
-    if (cudaStatus != cudaSuccess) {fprintf(stderr, "cudaEventElapsedTime returned error code %d!\n", cudaStatus); goto Error;}
+    gpuErrchk(cudaEventRecord(stopExec, 0));
+    gpuErrchk(cudaEventSynchronize(stopExec));
+    gpuErrchk(cudaEventElapsedTime(&elapsedTimeExecution, startExec, stopExec));
     cout << "Using Cuda Timers, the total kernel execution time was  " << elapsedTimeExecution << "ms" << endl;
-Error:
-    // either we have errd, or the program finished natrually.
-    // either way, free all device memory useage!
-    cudaEventDestroy(startExec);
-    cudaEventDestroy(stopExec);
     return OutputMat;
 }
 
 // Raise a Matrix to a power using CUDA
 // intput, mymatrix, int times
 // output, mymatrix
+// NOTE: This function does not yet use the newly found cutesy gpuerrchck, because it has memory that must be freed (a temp matrix) and we cannot just exit.
 MyMatrix MyMatrix::CUDAMatPower(MyMatrix *Mat1, int TIMES) {
     // create cuda events for timing
     cudaError_t cudaStatus;
