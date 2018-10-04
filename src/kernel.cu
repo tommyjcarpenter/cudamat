@@ -11,12 +11,13 @@ using namespace std;
 inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
     if (code != cudaSuccess) {
         fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        // note, the GPU memory will not be leaked: https://stackoverflow.com/questions/52651392/cuda-does-cudamallocmanaged-deal-with-exits
         if (abort) exit(code);
     }
 }
 
 // multiplies two matrices and returns a new matrix
-//intput two mymatrix objects
+// input two mymatrix objects
 // output mymatrix
 MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2) {
     // create cuda events for timing
@@ -30,25 +31,28 @@ MyMatrix MyMatrix::CUDAMatMatMultiply(MyMatrix *Mat1, MyMatrix *Mat2) {
     int Arows = Mat1->rows;
     int Acols = Mat1->cols;
     int Bcols = Mat2->cols;
-    dim3 dimGrid(ceil((double) Bcols/BLOCKSIZE), ceil((double) Arows/BLOCKSIZE));
 
-    // ptrs to input matrices data
-    double *ptr1 = Mat1->data;
-    double *ptr2 = Mat2->data;
+    // BLOCKSIZE in MyMatrix.h, currently 32
+    // TODO: fix the case where this blows up?
+    double threadsPerBlock = ceil( (double) Bcols / BLOCKSIZE);
+    if(threadsPerBlock > 1024) {
+        cout << "THIS WILL NOT WORK! threadsPerBlock exceeds maximum" << endl << flush;
+        // note, the GPU memory will not be leaked: https://stackoverflow.com/questions/52651392/cuda-does-cudamallocmanaged-deal-with-exits
+        exit(1);
+    }
+    double blocksPerGrid = ceil((double) Bcols/BLOCKSIZE);
+    dim3 dimGrid(threadsPerBlock, blocksPerGrid);
 
     // Output matrix
     MyMatrix OutputMat(Arows, Bcols, Mat1->padr, Mat2->padc);
-    // Pointer to output matrix; cuda will copy to this
-    double *outmatptr = OutputMat.data;
 
     // ready to preform a kernel; record that this even is happeneing
     gpuErrchk(cudaEventRecord(startExec, 0));
 
     // CUDA KERNEL CALL
-    MatrixMulKernel<<< dimGrid, dimBlock>>>(outmatptr, ptr1, ptr2, Arows, Acols, Bcols);
+    MatrixMulKernel<<< dimGrid, dimBlock>>>(OutputMat.data, Mat1->data, Mat2->data, Arows, Acols, Bcols);
 
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
+    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
     gpuErrchk(cudaDeviceSynchronize());
 
     // find the time the execution took
@@ -152,6 +156,12 @@ __global__ void MatrixMulKernel(double *OutMat, double *Mat1, double *Mat2,  int
     for (int B = 0; B < ceil((double)(Acols / BLOCKSIZE)) + 1; B++) {
         // fetch from global memory
         // yes, these took a LONG time to figure out. Pencil and Paper FTW!
+
+        /* notice:
+           1) how these indexes are actually offset a multiple of B, *not 1*.
+           2) threads are offset by col which will be 1 apart for each thread
+           3) which means that means all threads in the warp are hitting successive global memory cells
+        */
         int Mat1index = (row + blockrow*BLOCKSIZE)*Acols + col + B*BLOCKSIZE;
         int Mat2index = (B*BLOCKSIZE + row)*Bcols + BLOCKSIZE*blockcol + col;
 
@@ -167,6 +177,7 @@ __global__ void MatrixMulKernel(double *OutMat, double *Mat1, double *Mat2,  int
 
         __syncthreads();
 
+        // this computation is all using shared memory (fast)
         for (int j = 0; j < BLOCKSIZE; j++)
             if ((row*BLOCKSIZE + j < BLOCKSIZE*BLOCKSIZE) && (j*BLOCKSIZE + col < BLOCKSIZE*BLOCKSIZE))
                 Cvalue += subAshared[row*BLOCKSIZE + j]*subBshared[j*BLOCKSIZE + col];
