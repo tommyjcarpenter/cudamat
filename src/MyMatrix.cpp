@@ -127,9 +127,9 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
     if (genNew == 1) {
         Mat1 = MyMatrix::generateRandomMatrix(n, p);
         Mat2 = MyMatrix::generateRandomMatrix(p, m);
-        cout << "Writing the random input matrix to a file..." << endl;
-        (*Mat1).writeMatrix(filename1);
-        (*Mat2).writeMatrix(filename2);
+        //cout << "Writing the random input matrix to a file..." << endl;
+        //(*Mat1).writeMatrix(filename1);
+        //(*Mat2).writeMatrix(filename2);
     }
     else {
         cout << "Reading matrices from file..." << endl;
@@ -140,8 +140,8 @@ void MyMatrix::multMats(string filename1, string filename2, string gpuoutfname, 
     // make the call
     cout << "CUDA Multiplying... " << endl;
     MyMatrix result = result.CUDAMatMatMultiply(Mat1, Mat2);
-    cout << "Writing output file..." << endl;
-    result.writeMatrix(gpuoutfname);
+    //cout << "Writing output file..." << endl;
+    //result.writeMatrix(gpuoutfname);
 
     // verify against cpu
     cout << "Verifying against CPU" << endl;
